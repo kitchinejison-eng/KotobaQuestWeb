@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#171b22">
+  <title>ことばクエスト｜会話イベント</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body { width:100%; min-height:100%; margin:0; padding:0; background:#171b22; overflow:hidden; }
+    .opening-app { width:100%; max-width:none; min-height:100svh; margin:0; padding:0; }
+    .tutorial-screen.active { width:100%; min-height:100svh; height:100dvh; }
+    /* スマートフォンの縦画面でも、ねこまるの顔が画面上端から切れないサイズに調整します。 */
+    .opening-app .event-character {
+      left:50%; bottom:clamp(178px, 25vh, 225px);
+      width:min(66vw, 430px); height:min(58vh, 500px); max-height:none;
+      transform:translateX(-50%); align-items:flex-end; justify-content:center;
+    }
+    .opening-app .event-character-img {
+      display:block; width:auto; height:100%; max-width:100%; max-height:100%;
+      object-fit:contain; object-position:center bottom;
+    }
+    @media (orientation:landscape) and (max-height:620px) {
+      .opening-app .event-character { bottom:145px; width:min(32vw, 340px); height:min(60vh, 270px); }
+    }
+    @media (max-height:650px) and (orientation:portrait) {
+      .opening-app .event-character { bottom:155px; height:42vh; width:min(60vw, 330px); }
+    }
+
+    .event-replay-button {
+      position:absolute; left:5%; bottom:5%; z-index:8;
+      display:inline-flex; align-items:center; justify-content:center;
+      min-height:44px; padding:8px 14px; border:2px solid #fff; border-radius:10px;
+      background:linear-gradient(135deg,#087eaf,#075f8b); color:#fff;
+      font-size:clamp(14px,2.3vw,18px); font-weight:900; cursor:pointer;
+      box-shadow:0 4px 0 #06415e; text-shadow:none;
+    }
+    .event-replay-button:focus-visible { outline:4px solid #ffe16b; outline-offset:3px; }
+    .event-replay-button:active { transform:translateY(2px); box-shadow:0 2px 0 #06415e; }
+    .opening-app .event-dialog-text { bottom:30%; }
+    @media (max-width:700px) { .opening-app .event-dialog-text { bottom:32%; } }
+    @media (orientation:landscape) and (max-height:620px) { .event-replay-button { min-height:38px; padding:5px 10px; } }
+    @supports not (height: 100dvh) { .tutorial-screen.active { height:100vh; } }
+  </style>
+  <link rel="stylesheet" href="browser-responsive.css">
+</head>
+<body class="opening-body">
+  <main class="app opening-app">
+    <section id="tutorialScreen" class="screen tutorial-screen active" aria-label="会話イベント">
+      <div class="event-bg" aria-hidden="true"></div>
+      <div class="event-bg-overlay" aria-hidden="true"></div>
+      <div class="event-topbar">
+        <span class="event-top-label">ことばクエスト</span>
+        <span class="event-top-caption">会話イベント</span>
+      </div>
+      <div class="event-character" aria-hidden="true">
+        <img id="tutorialCharacterImage" src="images/ivent/cat_1_crop.png?v=48" alt="ねこまる" class="event-character-img">
+      </div>
+      <div class="event-dialog-area">
+        <img src="images/ivent/m_e1097_0.png" alt="" class="event-dialog-image" aria-hidden="true">
+        <div class="event-name" id="tutorialName">ネコマル</div>
+        <div class="event-dialog-text" id="tutorialDialog" aria-live="polite"></div>
+        <button type="button" class="event-replay-button" id="tutorialReplayBtn" aria-label="セリフをもう一度聞く">🔊 もう一度聞く</button>
+        <button type="button" class="event-next-button" id="tutorialNextBtn" aria-label="次へ">▼</button>
+      </div>
+    </section>
+  </main>
+  <script>
+  (function () {
+    'use strict';
+    var profiles = [
+      {
+        name: 'ねこまる', image: 'images/ivent/cat_1_crop.png?v=48',
+        greeting: ['やっほー！ ぼくは ねこまる。よろしくね！', 'こんにちは！ ねこまるだよ。', '会えてうれしいな！ ぼくは ねこまる。'],
+        welcome: ['ことばクエストへ ようこそ！', 'ここは 言葉の冒険をする世界だよ。', 'いっしょに 言葉の冒険へ出かけよう！'],
+        advice: ['自分のペースで ゆっくり進もうね。', '分からないときは、問題をもう一度聞いてみよう。', 'あわてずに、できるところから始めよう！'],
+        farewell: ['さあ、冒険を はじめよう！', '準備はいい？ ぼうけんへ出発！', 'きみのことを応援しているよ！']
+      },
+      {
+        name: '大根猫', image: 'images/ivent/cat_1_crop2.png?v=48',
+        greeting: ['にゃーん！ 大根猫が やってきたよ！', 'やあやあ！ わたしは 大根猫！', '元気いっぱい、大根猫だよ！'],
+        welcome: ['ことばクエストの世界へ ようこそ！', '今日も 言葉の力をためしてみよう！', '言葉の冒険を いっしょに楽しもう！'],
+        advice: ['よく聞いて、ゆっくり考えてみよう。', 'すぐに分からなくても大丈夫だよ。', '迷ったら、もう一度聞いてみるのもいいね！'],
+        farewell: ['よーし、一緒に冒険へ行こう！', '準備オッケー？ 進んでみよう！', 'さあ、はじめよう！ にゃーん！']
+      },
+      {
+        name: 'かぼちゃおじいさん', image: 'images/ivent/1_oji.png?v=48',
+        greeting: ['ほっほっほ、わしは かぼちゃおじいさんじゃ。', 'おお、よく来たのう。わしが案内しよう。', 'こんにちは。今日はわしと一緒に進もう。'],
+        welcome: ['言葉の冒険へ ようこそ。', '一問ずつ、ゆっくり進めばよいのじゃ。', '言葉の力は、少しずつ育てていけばよい。'],
+        advice: ['迷ったときは、問題をもう一度聞くのじゃ。', 'あわてることはない。よく見て考えるのじゃ。', '自分のペースで取り組めば、それでよいのじゃ。'],
+        farewell: ['では、冒険を始めるとしよう！', 'さあ、旅立ちの時じゃ！', 'よし、準備は整った。出発じゃ！']
+      }
+    ];
+    var pick = function (arr) { return arr[Math.floor(Math.random() * arr.length)]; };
+    var profile = pick(profiles);
+    var steps = [
+      { name: profile.name, text: pick(profile.greeting) },
+      { name: profile.name, text: pick(profile.welcome) },
+      { name: profile.name, text: pick(profile.advice) },
+      { name: profile.name, text: pick(profile.farewell) }
+    ];
+    var index = 0;
+    var timer = null;
+    var token = 0;
+    var voiceToken = 0;
+    var moved = false;
+    var nameEl = document.getElementById('tutorialName');
+    var dialogEl = document.getElementById('tutorialDialog');
+    var nextBtn = document.getElementById('tutorialNextBtn');
+    var replayBtn = document.getElementById('tutorialReplayBtn');
+    var characterImg = document.getElementById('tutorialCharacterImage');
+    if (characterImg) {
+      characterImg.src = profile.image;
+      characterImg.alt = profile.name;
+    }
+
+    function stopVoice() {
+      voiceToken++;
+      try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+      try { if (window.AndroidSpeech && typeof window.AndroidSpeech.stopTts === 'function') window.AndroidSpeech.stopTts(); } catch (e) {}
+    }
+    function chooseJapaneseVoice(voices) {
+      var ja = (voices || []).filter(function (v) { return /^ja([_-]|$)/i.test(v.lang || ''); });
+      if (!ja.length) return null;
+      return ja.find(function (v) { return /natural|neural|premium|online/i.test(v.name || ''); })
+        || ja.find(function (v) { return /google|microsoft/i.test(v.name || ''); }) || ja[0];
+    }
+    function speak(text) {
+      try {
+        if (window.AndroidSpeech && typeof window.AndroidSpeech.speak === 'function') {
+          stopVoice(); window.AndroidSpeech.speak(String(text).replace(/\s+/g, ' ').trim()); return;
+        }
+        if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+        stopVoice();
+        var thisVoice = voiceToken;
+        function startSpeech() {
+          if (moved || thisVoice !== voiceToken || document.hidden) return;
+          try {
+            var utterance = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, ' ').trim());
+            utterance.lang = 'ja-JP';
+            utterance.rate = 0.86;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            var voice = chooseJapaneseVoice(window.speechSynthesis.getVoices());
+            if (voice) utterance.voice = voice;
+            window.speechSynthesis.speak(utterance);
+          } catch (e) { console.warn('音声を再生できませんでした', e); }
+        }
+        if (window.speechSynthesis.getVoices().length) startSpeech();
+        else window.setTimeout(startSpeech, 240);
+      } catch (e) { console.warn('音声機能を使用できません', e); }
+    }
+    function renderStep() {
+      if (!nameEl || !dialogEl || !nextBtn) return;
+      var step = steps[index];
+      nameEl.textContent = step.name;
+      if (timer) window.clearInterval(timer);
+      var thisToken = ++token;
+      var charIndex = 0;
+      dialogEl.textContent = '';
+      timer = window.setInterval(function () {
+        if (thisToken !== token) { window.clearInterval(timer); return; }
+        charIndex += 1;
+        dialogEl.textContent = step.text.slice(0, charIndex);
+        if (charIndex >= step.text.length) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+      }, 42);
+      speak(step.text);
+      nextBtn.textContent = index >= steps.length - 1 ? 'タイトルへ' : 'つぎへ';
+      nextBtn.setAttribute('aria-label', nextBtn.textContent);
+      if (replayBtn) replayBtn.textContent = '🔊 もう一度聞く';
+    }
+    function finish() {
+      if (moved) return;
+      moved = true;
+      if (timer) window.clearInterval(timer);
+      timer = null;
+      stopVoice();
+      window.location.replace('index.html#title');
+    }
+    function advance() {
+      if (moved || !dialogEl) return;
+      var step = steps[index];
+      if (dialogEl.textContent !== step.text) {
+        if (timer) window.clearInterval(timer);
+        timer = null;
+        token += 1;
+        dialogEl.textContent = step.text;
+        return;
+      }
+      if (index < steps.length - 1) {
+        stopVoice();
+        index += 1;
+        renderStep();
+      } else {
+        finish();
+      }
+    }
+    if (nextBtn) nextBtn.addEventListener('click', advance);
+    if (replayBtn) replayBtn.addEventListener('click', function (event) {
+      event.stopPropagation();
+      if (steps[index]) speak(steps[index].text);
+    });
+    document.addEventListener('visibilitychange', function () { if (document.hidden) stopVoice(); });
+    window.addEventListener('pagehide', stopVoice);
+    renderStep();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ことばクエスト 素材チェック</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#213047;background:#f4f7fb}*{box-sizing:border-box}body{margin:0;padding:18px;max-width:920px;margin-inline:auto}h1{font-size:clamp(1.35rem,4vw,2rem)}p{line-height:1.7}.card{background:#fff;border:1px solid #d9e2ef;border-radius:14px;padding:16px;margin:12px 0}.item{display:grid;grid-template-columns:100px 1fr;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #edf0f5}.item:last-child{border-bottom:0}.preview{width:100px;height:84px;border:1px solid #dce3ec;background:#f8fafc;border-radius:8px;object-fit:contain}.path{font:12px ui-monospace,monospace;overflow-wrap:anywhere;color:#56657a}.status{font-weight:700;margin-top:6px}.ok{color:#187847}.bad{color:#b42318}.pending{color:#8a6100}.btn{display:inline-flex;padding:12px 16px;margin:6px 6px 6px 0;border-radius:9px;background:#1769aa;color:#fff;text-decoration:none;font-weight:700}.btn.secondary{background:#475569}.note{background:#fff7df;border-left:4px solid #d59c22;padding:12px;border-radius:8px}.small{font-size:.9rem;color:#586579}code{background:#eef2f7;padding:2px 4px;border-radius:4px} @media(max-width:430px){body{padding:10px}.item{grid-template-columns:78px 1fr;gap:10px}.preview{width:78px;height:76px}}
+</style>
+</head>
+<body>
+<h1>ことばクエスト 素材チェック</h1>
+<p>このページは、GitHub Pagesから画像・CSS・JavaScript・音楽が正しい場所に公開されているか調べます。表示されない項目がある場合、ゲームのコードより先に公開フォルダーの配置を確認してください。</p>
+<div class="card"><strong>サイトURL</strong><p id="siteUrl" class="path"></p><strong>結果</strong><p id="summary" class="pending">確認中…</p></div>
+<div class="card"><h2>画像素材</h2><div id="imageResults"></div></div>
+<div class="card"><h2>その他のファイル</h2><div id="fileResults"></div></div>
+<div class="card note"><strong>見方</strong><p>すべて「読み込みOK」なら、素材ファイルは公開されています。ここで失敗する場合は、<code>images</code>、<code>assets</code>、<code>BGM</code>、<code>fontawesome</code>が<code>index.html</code>と同じ階層にあるか、GitHub Pagesが正しいブランチ／フォルダーを公開しているかを確認してください。</p><p>正しい場所の例：<code>kotobatore_tesut/index.html</code> と <code>kotobatore_tesut/images/apple.jpg</code>。<code>kotobatore_tesut/KotobaQuestWeb_V41_FIXED/images/apple.jpg</code> のように親フォルダーが一段増えると読み込めません。</p></div>
+<a class="btn" href="./index.html">ことばクエストを開く</a><button class="btn secondary" id="rerun" type="button">もう一度確認</button>
+<script>
+(function(){
+'use strict';
+const images=[
+ ['りんご画像','images/apple.jpg'],
+ ['ねこまる立ち絵','images/ivent/cat_1_crop.png'],
+ ['アバター1','images/ivent/avatar_default_01.png'],
+ ['レベルアップ画像','images/ivent/LVUP_01.png'],
+ ['音声練習用イラスト','assets/images/voice/apple.svg'],
+ ['アプリアイコン','assets/icons/icon-192.png']
+];
+const files=[
+ ['メインCSS','style.css'],
+ ['スマートフォン対応CSS','browser-responsive.css'],
+ ['ゲーム処理','app.js'],
+ ['画面処理','app-ui.js'],
+ ['コトバ・ダンジョン','kotoba-dungeon.js'],
+ ['音楽ファイル','BGM/seishishitauchu.mp3'],
+ ['アイコンフォント','fontawesome/webfonts/fa-solid-900.woff2']
+];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const resolve=p=>new URL(p,document.baseURI).href;
+const statusMap=new Map();
+const total=images.length+files.length;
+document.getElementById('siteUrl').textContent=location.origin+location.pathname.replace(/[^/]*$/,'');
+function setResult(key,ok){statusMap.set(key,ok);updateSummary();}
+function updateSummary(){const passed=[...statusMap.values()].filter(v=>v===true).length;const failed=[...statusMap.values()].filter(v=>v===false).length;const el=document.getElementById('summary');if(statusMap.size<total){el.textContent='確認中… ('+statusMap.size+'/'+total+')';el.className='pending';return;}el.textContent=failed===0?'すべてOK：素材とコードファイルが公開されています。':'合計 '+failed+' 件が読み込めません。公開元とフォルダー配置を確認してください。';el.className=failed===0?'ok':'bad';}
+function addImage([label,path]){const row=document.createElement('div');row.className='item';const img=document.createElement('img');img.className='preview';img.alt=label;const text=document.createElement('div');text.innerHTML='<strong>'+esc(label)+'</strong><div class="path">'+esc(path)+'</div><div class="status pending">確認中…</div>';const stat=text.querySelector('.status');img.onload=()=>{stat.textContent='読み込みOK';stat.className='status ok';setResult('img:'+path,true);};img.onerror=()=>{stat.textContent='読み込み失敗（404またはパス不一致）';stat.className='status bad';img.removeAttribute('src');setResult('img:'+path,false);};row.append(img,text);document.getElementById('imageResults').appendChild(row);img.src=resolve(path);}
+function addFile([label,path]){const row=document.createElement('div');row.className='item';const icon=document.createElement('div');icon.textContent='📄';icon.style.fontSize='28px';const text=document.createElement('div');text.innerHTML='<strong>'+esc(label)+'</strong><div class="path">'+esc(path)+'</div><div class="status pending">確認中…</div>';const stat=text.querySelector('.status');row.append(icon,text);document.getElementById('fileResults').appendChild(row);fetch(resolve(path),{method:'HEAD',cache:'no-store'}).then(r=>{const ok=r.ok;stat.textContent=ok?'読み込みOK':'読み込み失敗（HTTP '+r.status+'）';stat.className='status '+(ok?'ok':'bad');setResult('file:'+path,ok);}).catch(()=>{stat.textContent='読み込み失敗（通信エラー）';stat.className='status bad';setResult('file:'+path,false);});}
+function run(){statusMap.clear();document.getElementById('imageResults').innerHTML='';document.getElementById('fileResults').innerHTML='';document.getElementById('summary').textContent='確認中…';document.getElementById('summary').className='pending';images.forEach(addImage);files.forEach(addFile);}
+document.getElementById('rerun').addEventListener('click',run);run();
+})();
+</script>
+</body></html>
